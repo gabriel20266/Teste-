@@ -1,5 +1,5 @@
 // Mude este número a cada atualização para os usuários receberem o aviso
-const VERSAO='v1.2';
+const VERSAO='v1.3';
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(VERSAO).then(c=>c.add('./index.html')).catch(()=>{}));
 });
