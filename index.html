@@ -1,82 +1,581 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#14213D">
-<title>Tarefas do Dia 3</title>
-<style>
-:root{--ink:#14213D;--mint:#E63946;--bg:#F3F7F8;--card:#fff;--amber:#FFB703;--mut:#6b7a8c}
-*{box-sizing:border-box;margin:0}
-body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
-header{background:var(--ink);color:#fff;padding:calc(env(safe-area-inset-top) + 24px) 20px 28px}
-h1{font-size:1.6rem}
-#resumo{margin-top:6px;color:#b8c4d6;font-size:.95rem}
-main{padding:16px;max-width:560px;margin:auto}
-form{display:flex;gap:8px;margin-bottom:16px}
-input{flex:1;padding:14px;border:2px solid #d5dee6;border-radius:12px;font-size:1rem}
-input:focus{outline:3px solid var(--mint);border-color:var(--mint)}
-button{border:0;border-radius:12px;font-size:1rem;cursor:pointer}
-.add{background:var(--mint);color:var(--ink);font-weight:700;padding:0 18px}
-ul{list-style:none;padding:0}
-li{display:flex;align-items:center;gap:12px;background:var(--card);padding:14px;border-radius:12px;margin-bottom:8px}
-li.ok span{text-decoration:line-through;color:var(--mut)}
-li span{flex:1;word-break:break-word}
-li input{flex:none;width:22px;height:22px;accent-color:var(--mint)}
-.del{background:none;color:var(--mut);padding:6px 10px}
-.vazio{text-align:center;color:var(--mut);padding:32px 0}
-#estado{position:fixed;right:12px;top:calc(env(safe-area-inset-top) + 10px);font-size:.8rem;color:#fff;background:#ffffff22;padding:4px 10px;border-radius:99px}
-#aviso{display:none;position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);background:var(--amber);color:var(--ink);padding:14px;border-radius:14px;align-items:center;justify-content:space-between;gap:10px;font-weight:600}
-#aviso button{background:var(--ink);color:#fff;padding:10px 14px}
-</style>
-</head>
-<body>
-<header>
-  <h1>Tarefas do Dia 3</h1>
-  <p id="resumo"></p>
-  <div id="estado"></div>
-</header>
-<main>
-  <form id="f"><input id="t" placeholder="Nova tarefa" autocomplete="off" required><button class="add">Adicionar</button></form>
-  <ul id="lista"></ul>
-</main>
-<div id="aviso"><span>Nova versão disponível</span><button id="atualizar">Atualizar agora</button></div>
-<script>
-const VERSAO='1.3';
-let tarefas=[],clicou=false;
-try{tarefas=JSON.parse(localStorage.getItem('tarefas')||'[]')}catch(e){}
-const $=id=>document.getElementById(id);
-function salvar(){try{localStorage.setItem('tarefas',JSON.stringify(tarefas))}catch(e){}}
-function mostrar(){
-  const l=$('lista');l.innerHTML='';
-  if(!tarefas.length)l.innerHTML='<p class="vazio">Nenhuma tarefa. Adicione a primeira acima.</p>';
-  tarefas.forEach((x,i)=>{
-    const li=document.createElement('li');if(x.ok)li.className='ok';
-    const c=document.createElement('input');c.type='checkbox';c.checked=x.ok;c.onchange=()=>{x.ok=c.checked;salvar();mostrar()};
-    const s=document.createElement('span');s.textContent=x.txt;
-    const d=document.createElement('button');d.className='del';d.textContent='Apagar';d.onclick=()=>{tarefas.splice(i,1);salvar();mostrar()};
-    li.append(c,s,d);l.append(li);
-  });
-  const f=tarefas.filter(x=>x.ok).length;
-  $('resumo').textContent=f+' de '+tarefas.length+' concluídas · v'+VERSAO;
-}
-$('f').onsubmit=e=>{e.preventDefault();const v=$('t').value.trim();if(!v)return;tarefas.unshift({txt:v,ok:false});$('t').value='';salvar();mostrar()};
-function rede(){$('estado').textContent=navigator.onLine?'Online':'Offline'}
-addEventListener('online',rede);addEventListener('offline',rede);rede();mostrar();
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f6fb">
+  <title>Calculadora</title>
 
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').then(reg=>{
-    const pronto=w=>{$('aviso').style.display='flex';$('atualizar').onclick=()=>{clicou=true;w.postMessage('ativar')}};
-    if(reg.waiting&&navigator.serviceWorker.controller)pronto(reg.waiting);
-    reg.addEventListener('updatefound',()=>{
-      const n=reg.installing;
-      n.addEventListener('statechange',()=>{if(n.state==='installed'&&navigator.serviceWorker.controller)pronto(n)});
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --display: #f8f9fd;
+      --text: #182033;
+      --muted: #81899b;
+      --key: #f0f2f8;
+      --key-hover: #e6e9f2;
+      --accent: #6558e8;
+      --accent-hover: #5548d4;
+      --operator: #eeecff;
+      --border: #e8eaf1;
+      --shadow: 0 24px 70px rgba(35, 43, 75, .12);
+    }
+
+    body.dark {
+      color-scheme: dark;
+      --bg: #11131b;
+      --card: #1a1d28;
+      --display: #151823;
+      --text: #f3f4fa;
+      --muted: #969caf;
+      --key: #252938;
+      --key-hover: #303548;
+      --accent: #8175ff;
+      --accent-hover: #7165ed;
+      --operator: #302d4f;
+      --border: #2b3040;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .35);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 28px 16px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(ellipse at 15% 10%, rgba(101, 88, 232, .10), transparent 35%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      transition: background .2s ease, color .2s ease;
+    }
+
+    .app {
+      width: min(100%, 430px);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 4px 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--accent);
+      color: white;
+      font-size: 20px;
+      font-weight: 700;
+      box-shadow: 0 7px 18px rgba(101, 88, 232, .25);
+    }
+
+    .brand-name {
+      font-size: 16px;
+      font-weight: 750;
+      letter-spacing: -.3px;
+    }
+
+    .brand-caption {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .top-actions { display: flex; gap: 8px; }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: var(--card);
+      color: var(--text);
+      font-size: 17px;
+      cursor: pointer;
+      transition: background .15s, transform .15s;
+    }
+
+    .icon-btn:hover { background: var(--key-hover); transform: translateY(-1px); }
+
+    .calculator {
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 26px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .display {
+      min-height: 152px;
+      padding: 20px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      overflow: hidden;
+      border-radius: 19px;
+      background: var(--display);
+      text-align: right;
+    }
+
+    .expression {
+      min-height: 27px;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 17px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .result {
+      min-height: 58px;
+      margin-top: 8px;
+      overflow: hidden;
+      font-size: clamp(36px, 10vw, 48px);
+      font-weight: 700;
+      letter-spacing: -2px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 11px;
+      margin-top: 16px;
+    }
+
+    .key {
+      min-height: 60px;
+      border: 0;
+      border-radius: 16px;
+      background: var(--key);
+      color: var(--text);
+      font: inherit;
+      font-size: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      transition: transform .12s ease, background .12s ease, filter .12s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .key:hover { background: var(--key-hover); }
+    .key:active { transform: scale(.96); }
+
+    .key.utility {
+      color: var(--accent);
+      background: var(--operator);
+      font-size: 16px;
+    }
+
+    .key.operator {
+      color: var(--accent);
+      font-size: 24px;
+    }
+
+    .key.equals {
+      background: var(--accent);
+      color: #fff;
+      font-size: 25px;
+      box-shadow: 0 8px 18px rgba(101, 88, 232, .2);
+    }
+
+    .key.equals:hover { background: var(--accent-hover); }
+
+    .key.zero { grid-column: span 2; }
+
+    .footer {
+      margin: 15px 4px 0;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .history-panel {
+      display: none;
+      margin-top: 14px;
+      padding: 17px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .history-panel.open { display: block; }
+
+    .history-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .clear-history {
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .history-list {
+      display: grid;
+      gap: 8px;
+      max-height: 210px;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--display);
+      text-align: right;
+    }
+
+    .history-expression { color: var(--muted); font-size: 12px; }
+    .history-value { margin-top: 3px; font-size: 16px; font-weight: 650; }
+    .empty-history { padding: 15px 0; color: var(--muted); font-size: 13px; text-align: center; }
+
+    @media (max-width: 380px) {
+      body { padding: 16px 10px; }
+      .calculator { padding: 13px; border-radius: 22px; }
+      .keys { gap: 8px; }
+      .key { min-height: 55px; border-radius: 14px; }
+      .display { min-height: 135px; padding: 16px 14px; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">÷</div>
+        <div>
+          <div class="brand-name">Calculadora</div>
+          <div class="brand-caption">Simples, rápida e precisa</div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button class="icon-btn" id="historyToggle" aria-label="Ver histórico" title="Histórico">◷</button>
+        <button class="icon-btn" id="themeToggle" aria-label="Mudar tema" title="Mudar tema">☾</button>
+      </div>
+    </header>
+
+    <section class="calculator" aria-label="Calculadora">
+      <div class="display" aria-live="polite">
+        <div class="expression" id="expression">Pronto para calcular</div>
+        <div class="result" id="result">0</div>
+      </div>
+
+      <div class="keys">
+        <button class="key utility" data-action="clear">AC</button>
+        <button class="key utility" data-action="delete" aria-label="Apagar último dígito">⌫</button>
+        <button class="key utility" data-value="%">%</button>
+        <button class="key operator" data-value="÷" aria-label="Dividir">÷</button>
+
+        <button class="key" data-value="7">7</button>
+        <button class="key" data-value="8">8</button>
+        <button class="key" data-value="9">9</button>
+        <button class="key operator" data-value="×" aria-label="Multiplicar">×</button>
+
+        <button class="key" data-value="4">4</button>
+        <button class="key" data-value="5">5</button>
+        <button class="key" data-value="6">6</button>
+        <button class="key operator" data-value="-" aria-label="Subtrair">−</button>
+
+        <button class="key" data-value="1">1</button>
+        <button class="key" data-value="2">2</button>
+        <button class="key" data-value="3">3</button>
+        <button class="key operator" data-value="+" aria-label="Somar">+</button>
+
+        <button class="key utility" data-value="(">(</button>
+        <button class="key utility" data-value=")">)</button>
+        <button class="key" data-action="sign">±</button>
+        <button class="key" data-value=".">.</button>
+
+        <button class="key zero" data-value="0">0</button>
+        <button class="key equals" data-action="equals">=</button>
+      </div>
+    </section>
+
+    <section class="history-panel" id="historyPanel">
+      <div class="history-heading">
+        <span>Histórico</span>
+        <button class="clear-history" id="clearHistory">Limpar histórico</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </section>
+
+    <div class="footer">Também podes usar o teclado do teu dispositivo</div>
+  </main>
+
+  <script>
+    const expressionEl = document.getElementById("expression");
+    const resultEl = document.getElementById("result");
+    const historyPanel = document.getElementById("historyPanel");
+    const historyList = document.getElementById("historyList");
+
+    let expression = "";
+    let justEvaluated = false;
+    let history = JSON.parse(localStorage.getItem("calcHistory") || "[]");
+
+    function displayExpression(value) {
+      return value.replace(/\*/g, "×").replace(/\//g, "÷");
+    }
+
+    function formatNumber(value) {
+      if (!Number.isFinite(value)) return "Erro";
+      const rounded = Number.parseFloat(value.toPrecision(12));
+      return new Intl.NumberFormat("pt-AO", {
+        maximumFractionDigits: 10
+      }).format(rounded);
+    }
+
+    // Calcula a expressão respeitando a prioridade das operações.
+    function calculate(input) {
+      const text = input.replace(/×/g, "*").replace(/÷/g, "/").replace(/\s/g, "");
+      let position = 0;
+
+      function parseExpression() {
+        let value = parseTerm();
+        while (text[position] === "+" || text[position] === "-") {
+          const operator = text[position++];
+          const next = parseTerm();
+          value = operator === "+" ? value + next : value - next;
+        }
+        return value;
+      }
+
+      function parseTerm() {
+        let value = parseFactor();
+        while (text[position] === "*" || text[position] === "/") {
+          const operator = text[position++];
+          const next = parseFactor();
+          if (operator === "/" && next === 0) throw new Error("Divisão por zero");
+          value = operator === "*" ? value * next : value / next;
+        }
+        return value;
+      }
+
+      function parseFactor() {
+        let value;
+
+        if (text[position] === "+") {
+          position++;
+          value = parseFactor();
+        } else if (text[position] === "-") {
+          position++;
+          value = -parseFactor();
+        } else if (text[position] === "(") {
+          position++;
+          value = parseExpression();
+          if (text[position] !== ")") throw new Error("Parênteses incompletos");
+          position++;
+        } else {
+          const start = position;
+          while (/[0-9.]/.test(text[position] || "")) position++;
+          if (start === position) throw new Error("Expressão incompleta");
+          const number = Number(text.slice(start, position));
+          if (Number.isNaN(number)) throw new Error("Número inválido");
+          value = number;
+        }
+
+        // Percentagem: 25% passa a 0,25.
+        while (text[position] === "%") {
+          value /= 100;
+          position++;
+        }
+        return value;
+      }
+
+      const answer = parseExpression();
+      if (position !== text.length || !Number.isFinite(answer)) {
+        throw new Error("Expressão inválida");
+      }
+      return answer;
+    }
+
+    function updateDisplay() {
+      expressionEl.textContent = expression
+        ? displayExpression(expression)
+        : "Pronto para calcular";
+
+      if (!expression) {
+        resultEl.textContent = "0";
+        return;
+      }
+
+      try {
+        resultEl.textContent = formatNumber(calculate(expression));
+      } catch {
+        resultEl.textContent = "…";
+      }
+    }
+
+    function addValue(value) {
+      if (justEvaluated && /[0-9.(]/.test(value)) expression = "";
+      justEvaluated = false;
+
+      const operators = ["+", "-", "*", "/"];
+      const normalized = value === "×" ? "*" : value === "÷" ? "/" : value;
+
+      if (operators.includes(normalized)) {
+        if (!expression && normalized !== "-") return;
+        if (operators.includes(expression.slice(-1))) {
+          expression = expression.slice(0, -1);
+        }
+      }
+
+      if (normalized === ".") {
+        const currentNumber = expression.split(/[+\-*/()%()]/).pop();
+        if (currentNumber.includes(".")) return;
+        if (!currentNumber) expression += "0";
+      }
+
+      expression += normalized;
+      updateDisplay();
+    }
+
+    function clearAll() {
+      expression = "";
+      justEvaluated = false;
+      updateDisplay();
+    }
+
+    function deleteLast() {
+      if (justEvaluated) {
+        clearAll();
+        return;
+      }
+      expression = expression.slice(0, -1);
+      updateDisplay();
+    }
+
+    function toggleSign() {
+      if (!expression) {
+        expression = "-";
+      } else {
+        const match = expression.match(/(\d*\.?\d+)%?$/);
+        if (!match) {
+          expression += "-";
+        } else {
+          const start = match.index;
+          const number = match[0];
+          const before = expression.slice(0, start);
+          expression = before.endsWith("-")
+            ? before.slice(0, -1) + number
+            : before + "-" + number;
+        }
+      }
+      justEvaluated = false;
+      updateDisplay();
+    }
+
+    function saveHistory(original, answer) {
+      history.unshift({ expression: original, result: answer });
+      history = history.slice(0, 10);
+      localStorage.setItem("calcHistory", JSON.stringify(history));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      if (!history.length) {
+        historyList.innerHTML = '<div class="empty-history">Ainda não há cálculos.</div>';
+        return;
+      }
+
+      historyList.innerHTML = history.map(item => `
+        <div class="history-item">
+          <div class="history-expression">${displayExpression(item.expression)} =</div>
+          <div class="history-value">${formatNumber(item.result)}</div>
+        </div>
+      `).join("");
+    }
+
+    function showResult() {
+      if (!expression) return;
+      try {
+        const original = expression;
+        const answer = calculate(expression);
+        saveHistory(original, answer);
+        expression = String(Number.parseFloat(answer.toPrecision(12)));
+        expressionEl.textContent = displayExpression(original) + " =";
+        resultEl.textContent = formatNumber(answer);
+        justEvaluated = true;
+      } catch {
+        resultEl.textContent = "Erro";
+        expressionEl.textContent = "Verifica a expressão";
+      }
+    }
+
+    document.querySelector(".keys").addEventListener("click", event => {
+      const button = event.target.closest("button");
+      if (!button) return;
+
+      const { action, value } = button.dataset;
+      if (action === "clear") clearAll();
+      else if (action === "delete") deleteLast();
+      else if (action === "sign") toggleSign();
+      else if (action === "equals") showResult();
+      else if (value) addValue(value);
     });
-    setInterval(()=>reg.update().catch(()=>{}),60000);
-  }).catch(()=>{});
-  let rec=false;
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(rec||!clicou)return;rec=true;location.reload()});
-}
-</script>
+
+    document.getElementById("historyToggle").addEventListener("click", () => {
+      historyPanel.classList.toggle("open");
+    });
+
+    document.getElementById("clearHistory").addEventListener("click", () => {
+      history = [];
+      localStorage.removeItem("calcHistory");
+      renderHistory();
+    });
+
+    document.getElementById("themeToggle").addEventListener("click", event => {
+      document.body.classList.toggle("dark");
+      event.currentTarget.textContent =
+        document.body.classList.contains("dark") ? "☀" : "☾";
+    });
+
+    document.addEventListener("keydown", event => {
+      if (/^[0-9.]$/.test(event.key)) addValue(event.key);
+      else if (event.key === "+") addValue("+");
+      else if (event.key === "-") addValue("-");
+      else if (event.key === "*") addValue("×");
+      else if (event.key === "/") {
+        event.preventDefault();
+        addValue("÷");
+      } else if (event.key === "%") addValue("%");
+      else if (event.key === "(" || event.key === ")") addValue(event.key);
+      else if (event.key === "Enter" || event.key === "=") showResult();
+      else if (event.key === "Backspace") deleteLast();
+      else if (event.key === "Escape") clearAll();
+    });
+
+    renderHistory();
+    updateDisplay();
+  </script>
 </body>
 </html>
